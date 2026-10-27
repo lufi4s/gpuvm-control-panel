@@ -22,6 +22,8 @@
 - v4 (enterprise restyle): removed gradients, glow, blur, ping animations, bouncy springs, colored icon chips and pill shapes. Now: fixed dark navy sidebar, flat accent colour, 6-8px radii, uppercase KPI labels, dense tables with shaded header row, squared badges, straight (non-smoothed) chart lines, square gauge/bar ends. Files: styles.css (rewritten), app.js (motion/chart tweaks), index.html (chip text).
 - Verified with headless Edge via CDP (`scratchpad/shot.mjs`): overview, instances, zones, billing, launch wizard render without console errors.
 
+- Git: pushed to private repo https://github.com/lufi4s/gpuvm-control-panel (branch main). `.gitignore` excludes `.claude/` and `.mcp.json`. Repo-local git identity set to lufi4s / saiful.ops@zenexcloud.com.
+
 ## 3. Pending / Next Tasks & Known Issues
 - All data is mocked client-side. Replace `seed()`, `vmAction()`, wizard submit, `addFundsDialog`, `tick()` with real backend APIs (auth, VM lifecycle, metrics, billing, payment gateways).
 - Zone capacity/prices are placeholders; confirm real GPU prices, DC names and addresses.
