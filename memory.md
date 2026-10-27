@@ -24,7 +24,7 @@
 
 - Git: pushed to private repo https://github.com/lufi4s/gpuvm-control-panel (branch main). `.gitignore` excludes `.claude/` and `.mcp.json`. Repo-local git identity set to lufi4s / saiful.ops@zenexcloud.com.
 
-- Git: second private repo https://github.com/lufi4s/gpuvm-control-panel-full (remote `full`, branch main) created with the same project files. `.claude/` and `.mcp.json` intentionally NOT committed (blocked by the auto-mode classifier; they hold only local Motion skill/MCP URL config, add manually if wanted).
+- Git: canonical repo is https://github.com/lufi4s/gpuvm-control-panel (private, main). Duplicate repo gpuvm-control-panel-full is to be deleted (needs gh delete_repo scope). .claude/ and .mcp.json are intentionally not committed.
 
 ## 3. Pending / Next Tasks & Known Issues
 - All data is mocked client-side. Replace `seed()`, `vmAction()`, wizard submit, `addFundsDialog`, `tick()` with real backend APIs (auth, VM lifecycle, metrics, billing, payment gateways).
