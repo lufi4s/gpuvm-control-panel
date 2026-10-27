@@ -58,7 +58,7 @@ function seed() {
     invoices: [['INV-2026-05', 412000, 'Paid'], ['INV-2026-06', 538000, 'Paid'], ['INV-2026-07', 655000, 'Paid'], ['INV-2026-08', 781000, 'Paid'], ['INV-2026-09', 902000, 'Paid']].map(([n, a, st], i) => ({ id: n, amount: a, status: st, date: Date.now() - (150 - i * 30) * 864e5 })),
     payments: [{ id: 'PAY-' + uid(), method: 'bKash', amount: 500000, date: Date.now() - 9 * 864e5 }, { id: 'PAY-' + uid(), method: 'Bank transfer', amount: 1000000, date: Date.now() - 34 * 864e5 }],
     events: [{ t: Date.now() - 36e5, kind: 'info', msg: 'Welcome to GPU Cloud Bangladesh - your account is ready' }, { t: Date.now() - 5 * 864e5, kind: 'ok', msg: 'llm-train-01 started in Gazipur' }],
-    theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+    theme: 'dark',
   };
 }
 let S = JSON.parse(localStorage.getItem(KEY) || 'null') || seed();
