@@ -1,15 +1,22 @@
+---
+// GPU Cloud Console - customer shell. The interactive app lives in public/app.js
+// (ECharts + Motion from public/vendor). Astro outputs this as static HTML.
+---
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GPU Cloud Console</title>
-<link rel="stylesheet" href="styles.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"/></svg></span><div><b>GPU Cloud</b><small>Bangladesh · Customer console</small></div></div>
+    <div class="brand"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"/></svg></span><div><b>Betopia AI Cloud</b><small>Customer control center</small></div></div>
     <div class="side-sec">Compute</div>
     <div class="navwrap">
       <div class="nav-ind" id="navInd"></div>
@@ -45,9 +52,9 @@
 <div id="modal" class="modal hidden"></div>
 <div id="drawer" class="drawer hidden"></div>
 <div id="toasts"></div>
-<script src="vendor/echarts.min.js"></script>
-<script src="vendor/bgd.js"></script>
-<script src="vendor/motion.js"></script>
-<script src="app.js"></script>
+<script is:inline src="/vendor/echarts.min.js"></script>
+<script is:inline src="/vendor/bgd.js"></script>
+<script is:inline src="/vendor/motion.js"></script>
+<script is:inline src="/app.js"></script>
 </body>
 </html>
