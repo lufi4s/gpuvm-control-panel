@@ -198,13 +198,23 @@ function renderAll() {
   SECTIONS.forEach(v => views[v].init && views[v].init());
   SECTIONS.forEach(v => views[v].update && views[v].update(true));
   enter(view);
+  // scroll-spy: highlight the rail item for the section currently in view
+  spy.disconnect(); view.querySelectorAll('.wt-sec').forEach(s => spy.observe(s));
 }
+const spy = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  const id = e.target.id.slice(4);
+  document.querySelectorAll('#railNav a').forEach(a => a.classList.toggle('active', a.dataset.sec === id));
+}), { rootMargin: '-35% 0px -55% 0px' });
+// collapsible rail, remembered per browser
+function setRail(collapsed) { document.documentElement.dataset.rail = collapsed ? 'collapsed' : 'expanded'; localStorage.setItem('gpuvm-rail', collapsed ? '1' : '0'); }
+$('#railToggle').onclick = () => setRail(document.documentElement.dataset.rail !== 'collapsed');
 const card = (t, sub, id, cls = '') => `<div class="card"><h3>${t}</h3><div class="sub">${sub}</div><div id="${id}" class="chart ${cls}"></div></div>`;
 const ICONS = {
   server: '<rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><path d="M7 7h.01M7 17h.01"/>',
   chip: '<rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"/>',
   pulse: '<path d="M3 12h4l3-8 4 16 3-8h4"/>',
-  coin: '<circle cx="12" cy="12" r="9"/><path d="M14.5 9a2.5 2.5 0 0 0-2.5-1.5c-1.4 0-2.5.8-2.5 2s1 1.6 2.5 2 2.5.8 2.5 2-1.1 2-2.5 2A2.5 2.5 0 0 1 9.5 15M12 6v1.5M12 16.5V18"/>',
+  coin: '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 10v4M18 10v4"/>',
 };
 const kpi = (l, id, note = '', icon = 'server', color = 'var(--s1)', extra = '') => `<div class="card kpi" style="--c:${color}"><div class="card-h"><div class="lbl">${l}</div><div class="ico"><svg viewBox="0 0 24 24">${ICONS[icon]}</svg></div></div><div class="val" id="${id}">0</div><div class="note">${note}</div>${extra}</div>`;
 // Re-render a table/card container unless the pointer is over it (keeps clicks reliable during live refresh)
@@ -581,6 +591,6 @@ const unpress = e => { const t = e.target.closest(PRESS); if (t && !reduce) anim
 document.addEventListener('pointerdown', e => { const t = e.target.closest(PRESS); if (t && !reduce) animate(t, { scale: 0.98 }, { duration: 0.08 }); });
 document.addEventListener('pointerup', unpress); document.addEventListener('pointerout', unpress);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDrawer(); } });
-{ const [hv, ht] = location.hash.slice(1).split(','); if (ht) S.theme = ht; applyTheme(); renderAll(); updateStatus(); if (views[hv]) document.getElementById('sec-' + hv)?.scrollIntoView(); if (hv === 'drawer') openDrawer(S.vms[0].id); }
+{ const [hv, ht] = location.hash.slice(1).split(','); if (ht) S.theme = ht; applyTheme(); setRail(localStorage.getItem('gpuvm-rail') === '1' || (localStorage.getItem('gpuvm-rail') === null && innerWidth < 900)); renderAll(); updateStatus(); if (views[hv]) document.getElementById('sec-' + hv)?.scrollIntoView(); if (hv === 'drawer') openDrawer(S.vms[0].id); }
  setInterval(tick, 2000); setInterval(save, 10000);
 })();

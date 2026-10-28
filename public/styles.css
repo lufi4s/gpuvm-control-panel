@@ -27,15 +27,37 @@
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 var(--display);-webkit-font-smoothing:antialiased}
-.app{min-height:100vh}
-/* watchtower top bar: brand, in-page section index, controls. No sidebar. */
-.wt-bar{position:sticky;top:0;z-index:15;background:var(--side);border-bottom:1px solid var(--side-line);height:56px;display:flex;align-items:center;gap:24px;padding:0 28px;color:var(--side-text)}
-.brand{display:flex;align-items:center;flex:none}
-.brand-logo{display:block;height:22px;width:auto}
-.wt-jump{display:flex;gap:2px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
-.wt-jump::-webkit-scrollbar{display:none}
-.wt-jump a{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--side-text);padding:18px 10px 16px;white-space:nowrap;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
-.wt-jump a:hover{color:#fff;border-bottom-color:var(--accent)}
+/* collapsible side rail (fixed) + content offset; top bar holds status and actions */
+:root{--rail-w:232px}
+:root[data-rail=collapsed]{--rail-w:64px}
+.app{min-height:100vh;margin-left:var(--rail-w);transition:margin-left .2s ease}
+.rail{position:fixed;top:0;bottom:0;left:0;width:var(--rail-w);background:var(--side);border-right:1px solid var(--side-line);display:flex;flex-direction:column;z-index:20;overflow:hidden;transition:width .2s ease}
+.rail-top{height:56px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px;border-bottom:1px solid var(--side-line);flex:none}
+.rail-logo{display:block;height:20px;width:auto;min-width:0}
+.rail-mark{display:none;width:28px;height:28px;flex:none;place-items:center;background:var(--ac);color:var(--ink);font-family:var(--mono);font-size:13px;font-weight:500}
+/* hinge handle on the rail's right edge: sits on the seam, chevron flips when collapsed */
+.rail-edge{position:fixed;top:50%;left:calc(var(--rail-w) - 13px);transform:translateY(-50%);z-index:21;width:26px;height:26px;display:grid;place-items:center;padding:0;background:var(--side);border:1px solid var(--side-line);border-radius:50%;color:var(--side-dim);box-shadow:0 0 0 4px var(--bg);cursor:pointer;transition:left .2s ease,color .15s,border-color .15s}
+.rail-edge:hover{color:var(--ac);border-color:var(--ac)}
+.rail-edge:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.rail-edge svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s ease}
+:root[data-rail=collapsed] .rail-edge svg{transform:rotate(180deg)}
+.rail-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px;display:flex;flex-direction:column;gap:2px;scrollbar-width:none}
+.rail-nav::-webkit-scrollbar{display:none}
+.rail-sec{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--side-dim);padding:14px 10px 6px;white-space:nowrap}
+.rail-nav a{display:flex;align-items:center;gap:12px;height:36px;padding:0 10px;color:var(--side-text);text-decoration:none;white-space:nowrap;border-left:2px solid transparent;transition:color .15s,background .15s}
+.rail-nav a svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.rail-nav a:hover svg,.rail-nav a.active svg{opacity:1}
+.rail-nav a span{font-size:13px;font-weight:500}
+.rail-nav a:hover{color:#fff;background:var(--side-2)}
+.rail-nav a.active{color:#fff;background:var(--side-2);border-left-color:var(--ac)}
+:root[data-rail=collapsed] .rail-top{justify-content:center;padding:0}
+:root[data-rail=collapsed] .rail-logo,:root[data-rail=collapsed] .rail-nav a span{display:none}
+:root[data-rail=collapsed] .rail-mark{display:grid}
+:root[data-rail=collapsed] .rail-sec{font-size:0;height:1px;padding:0;margin:8px 14px;background:var(--side-line)}
+:root[data-rail=collapsed] .rail-nav a{justify-content:center;padding:0;border-left:0}
+:root[data-rail=collapsed] .rail-nav a.active{box-shadow:inset 2px 0 0 var(--ac)}
+/* watchtower top bar: status, launch, theme, account */
+.wt-bar{position:sticky;top:0;z-index:15;background:var(--side);border-bottom:1px solid var(--side-line);height:56px;display:flex;align-items:center;justify-content:flex-end;gap:24px;padding:0 28px;color:var(--side-text)}
 .wt-right{display:flex;align-items:center;gap:10px;flex:none}
 .wt-right .btn.ghost{color:var(--side-text);padding:6px 10px;font-size:11px}
 .wt-right .btn.ghost:hover{background:var(--side-2);color:#fff}
@@ -63,7 +85,7 @@ main{padding:12px 28px 48px;min-width:0;max-width:1680px;margin:0 auto}
 .btn.danger:hover{background:color-mix(in srgb,var(--bad) 8%,transparent);border-color:color-mix(in srgb,var(--bad) 40%,var(--border))}
 .btn.ghost{background:transparent;border-color:transparent;color:var(--text-2)}
 .btn.sm{padding:4px 9px;font-size:12px}
-.btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn svg{width:14px;height:14px;flex:none;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 /* grid + cards */
 .grid{display:grid;gap:14px}
@@ -76,7 +98,8 @@ main{padding:12px 28px 48px;min-width:0;max-width:1680px;margin:0 auto}
 .card .sub{color:var(--text-3);font-size:12px;margin-bottom:8px}
 .card-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .kpi{position:relative;overflow:hidden;padding:14px 16px}
-.kpi .ico{display:none}
+.kpi .ico{display:grid;place-items:center;width:28px;height:28px;flex:none;border:1px solid var(--border);color:var(--c,var(--accent))}
+.kpi .ico svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .kpi .lbl{color:var(--text-2);font-family:var(--mono);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em}
 .kpi .val{font-size:24px;font-weight:600;margin-top:8px;font-variant-numeric:tabular-nums;letter-spacing:-.01em;line-height:1.15;white-space:nowrap}
 .kpi .note{color:var(--text-3);font-size:12px;margin-top:3px}
@@ -175,5 +198,5 @@ code{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--text
 .cap{margin-top:12px}.cap>div:first-child{display:flex;justify-content:space-between;font-size:13px}.cap span{color:var(--text-3);font-size:12px}
 .cap .bar{margin-top:6px}
 .zone .dl{margin-top:4px}
-@media(max-width:900px){.wt-bar{padding:0 14px;gap:12px}.wt-jump{display:none}.cols-2,.cols-w{grid-template-columns:1fr}main{padding:12px 16px 32px}}
+@media(max-width:900px){.wt-bar{padding:0 14px;gap:12px}.cols-2,.cols-w{grid-template-columns:1fr}main{padding:12px 16px 32px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
