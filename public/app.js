@@ -1,4 +1,4 @@
-/* GPU Cloud Console - customer control panel (ECharts). Demo data persists in localStorage. */
+/* Betopia AI Cloud - customer control center (ECharts). Account state persists in localStorage until the API is wired. */
 (() => {
 const GPUS = {
   rtxpro6000: { name: 'NVIDIA RTX PRO 6000 Blackwell Server Edition', short: 'RTX PRO 6000 SE', arch: 'Blackwell', mem: 96, vcpu: 16, ram: 192, price: 190, tdp: 600, tag: 'Best value', status: 'available' },
@@ -57,7 +57,7 @@ function seed() {
     wallet: 420000,
     invoices: [['INV-2026-05', 412000, 'Paid'], ['INV-2026-06', 538000, 'Paid'], ['INV-2026-07', 655000, 'Paid'], ['INV-2026-08', 781000, 'Paid'], ['INV-2026-09', 902000, 'Paid']].map(([n, a, st], i) => ({ id: n, amount: a, status: st, date: Date.now() - (150 - i * 30) * 864e5 })),
     payments: [{ id: 'PAY-' + uid(), method: 'bKash', amount: 500000, date: Date.now() - 9 * 864e5 }, { id: 'PAY-' + uid(), method: 'Bank transfer', amount: 1000000, date: Date.now() - 34 * 864e5 }],
-    events: [{ t: Date.now() - 36e5, kind: 'info', msg: 'Welcome to GPU Cloud Bangladesh - your account is ready' }, { t: Date.now() - 5 * 864e5, kind: 'ok', msg: 'llm-train-01 started in Gazipur' }],
+    events: [{ t: Date.now() - 36e5, kind: 'info', msg: 'Account active · Pro plan · Bangladesh zones' }, { t: Date.now() - 5 * 864e5, kind: 'ok', msg: 'llm-train-01 started in Gazipur' }],
     theme: 'dark',
   };
 }
@@ -112,14 +112,6 @@ function setNum(id, to, fmt = v => Math.round(v)) {
   el._a = animate(from, to, { duration: dur(from === 0 ? 0.6 : 0.4), ease: 'easeOut', onUpdate: v => { el.textContent = fmt(v); } });
 }
 function setBar(id, pct) { const el = document.getElementById(id); if (el) animate(el, { width: clamp(pct, 0, 100) + '%' }, { duration: dur(0.7), ease: 'easeOut' }); }
-let navY = null;
-function moveNav(instant) {
-  const a = $('#nav a.active'), ind = $('#navInd'); if (!a) return;
-  const y = a.offsetTop;
-  if (navY === null || instant || reduce) ind.style.transform = `translateY(${y}px)`;
-  else animate(ind, { y }, { type: 'spring', visualDuration: 0.25, bounce: 0 });
-  navY = y;
-}
 
 /* ---------- UI helpers ---------- */
 function toast(msg) {
@@ -194,14 +186,17 @@ function aggregate() {
 
 /* ---------- views ---------- */
 const views = {};
-let cur = 'overview';
+// Watchtower: every module renders on one page, in this order (also the top-bar index order).
+const SECTIONS = ['overview', 'instances', 'zones', 'monitoring', 'storage', 'network', 'keys', 'billing', 'activity'];
 const titles = { overview: 'Overview', instances: 'Instances', zones: 'Zones & Capacity', monitoring: 'Monitoring', storage: 'Snapshots & Disks', network: 'Firewall', keys: 'SSH Keys', billing: 'Billing & Wallet', activity: 'Activity Log' };
 const subtitles = { overview: 'Your GPU fleet across Bangladesh at a glance', instances: 'Launch, control and connect to your GPU virtual machines', zones: 'Data-centre zones in Dhaka, Gazipur and Jashore with live GPU availability', monitoring: 'Real-time GPU telemetry per instance', storage: 'Back up and manage disks', network: 'Control inbound traffic to your instances', keys: 'Manage access to your machines', billing: 'Wallet, payments, invoices and cost forecast (BDT)', activity: 'Audit trail of everything that happened in your account' };
-function go(v) {
-  cur = v; disposeGroup('view'); $('#title').textContent = titles[v]; $('#subtitle').textContent = subtitles[v];
-  document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('active', a.dataset.view === v));
-  moveNav(!navY);
-  const view = $('#view'); view.innerHTML = views[v].html(); views[v].init && views[v].init(); views[v].update && views[v].update(true);
+// Builds every section into one page, then wires and paints them all.
+function renderAll() {
+  disposeGroup('view');
+  const view = $('#view');
+  view.innerHTML = SECTIONS.map(v => `<section class="wt-sec" id="sec-${v}"><div class="sec-h"><h2>${titles[v]}</h2><span>${subtitles[v]}</span></div>${views[v].html()}</section>`).join('');
+  SECTIONS.forEach(v => views[v].init && views[v].init());
+  SECTIONS.forEach(v => views[v].update && views[v].update(true));
   enter(view);
 }
 const card = (t, sub, id, cls = '') => `<div class="card"><h3>${t}</h3><div class="sub">${sub}</div><div id="${id}" class="chart ${cls}"></div></div>`;
@@ -223,14 +218,20 @@ function zoneStats(z) {
   return { tot, free, mine };
 }
 function zoneMapOpt() {
-  if (!echarts.getMap('BGD')) echarts.registerMap('BGD', window.BGD_GEO);
-  const b = base(), cols = palette();
+  // BGD_DIV = 8 official divisions (geoBoundaries); their borders draw the national outline.
+  if (!echarts.getMap('BGD')) echarts.registerMap('BGD', window.BGD_DIV);
+  const b = base(), cols = palette(), mono = 'DM Mono, ui-monospace, monospace';
   const data = ZONE_IDS.map((z, i) => { const st = zoneStats(z); return { name: ZONES[z].name, zone: z, value: [ZONES[z].lng, ZONES[z].lat, st.free], st, itemStyle: { color: cols[i] }, label: { position: z === 'gazipur' ? 'top' : z === 'jashore' ? 'left' : 'right' } }; });
-  return { animation: true, tooltip: { trigger: 'item', backgroundColor: b.surface, borderColor: css('--border'), textStyle: { color: css('--text') },
+  return { animation: true,
+    tooltip: { trigger: 'item', backgroundColor: b.surface, borderColor: css('--border'), textStyle: { color: css('--text') },
       formatter: p => `<b>${p.name}</b> · ${ZONES[p.data.zone].tier}<br>${ZONES[p.data.zone].site}<br>Free GPUs: <b>${p.data.st.free}</b> / ${p.data.st.tot}<br>Your running GPUs: <b>${p.data.st.mine}</b><br>Latency from Dhaka: ~${ZONES[p.data.zone].ping} ms` },
-    geo: { map: 'BGD', roam: false, silent: true, layoutCenter: ['50%', '52%'], layoutSize: '100%', itemStyle: { areaColor: css('--surface-2'), borderColor: css('--text-3'), borderWidth: 1 } },
-    series: [{ type: 'effectScatter', coordinateSystem: 'geo', data, symbolSize: 13, showEffectOn: 'render', rippleEffect: { brushType: 'stroke', scale: 3.4, period: 4 },
-      itemStyle: { borderColor: b.surface, borderWidth: 2 }, label: { show: true, formatter: '{b}', position: 'right', distance: 10, color: css('--text'), fontWeight: 600, fontSize: 13 } }] };
+    geo: { map: 'BGD', roam: false, silent: true, layoutCenter: ['50%', '50%'], layoutSize: '100%',
+      itemStyle: { areaColor: css('--surface-2'), borderColor: css('--border'), borderWidth: 1 },
+      emphasis: { disabled: true }, label: { show: false } },
+    series: [{ type: 'effectScatter', coordinateSystem: 'geo', data, symbol: 'rect', symbolSize: 11, showEffectOn: 'render', rippleEffect: { brushType: 'stroke', scale: 3.2, period: 4 }, zlevel: 2,
+      itemStyle: { borderColor: b.surface, borderWidth: 2 },
+      label: { show: true, distance: 10, formatter: p => `{n|${p.data.name}}\n{s|${p.data.st.free} free · ${ZONES[p.data.zone].ping} ms}`,
+        rich: { n: { color: css('--text'), fontWeight: 600, fontSize: 13, lineHeight: 18 }, s: { color: css('--text-2'), fontFamily: mono, fontSize: 11, lineHeight: 15 } } } }] };
 }
 const mapKey = () => S.theme + ZONE_IDS.map(z => { const st = zoneStats(z); return st.free + ':' + st.mine; }).join();
 function addFundsDialog() {
@@ -246,13 +247,49 @@ function addFundsDialog() {
   $('#fok').onclick = () => { const a = +$('#amt').value; if (!(a >= 500)) return toast('Minimum top-up is ৳500'); S.wallet += a; S.payments.unshift({ id: 'PAY-' + uid().toUpperCase(), method, amount: a, date: Date.now() }); logEv(`Wallet topped up ${money(a)} via ${method}`, 'ok'); save(); closeModal(); toast(`${money(a)} added via ${method}`); refresh(); };
 }
 
+const jumpTo = sec => document.getElementById('sec-' + sec)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+const availGpus = () => Object.keys(GPUS).filter(g => GPUS[g].status === 'available');
+// Live checks that need a human decision. Each item links to the module that fixes it.
+function attentionItems() {
+  const items = [];
+  running().forEach(v => { const u = hist(v).util.at(-1); if (u >= 90) items.push(['warn', `${esc(v.name)} is at ${u.toFixed(0)}% GPU utilization`, 'Consider more GPUs or a second instance for this workload', 'instances']); });
+  ZONE_IDS.forEach(z => availGpus().forEach(g => { const tot = ZONES[z].cap[g], f = freeGpus(z, g); if (f <= Math.max(1, Math.round(tot * .15))) items.push(['warn', `${ZONES[z].name} · ${GPUS[g].short} is nearly full`, `${f} of ${tot} GPUs free — new launches may be limited`, 'zones']); }));
+  const rr = running().reduce((a, v) => a + rate(v), 0);
+  if (rr) { const days = S.wallet / (rr * 24); if (days < 7) items.push([days < 2 ? 'bad' : 'warn', `Wallet runway ${days < 1 ? Math.floor(days * 24) + ' hours' : days.toFixed(1) + ' days'}`, 'Top up before the balance runs out to avoid interruption', 'billing']); }
+  return items;
+}
+function attention() {
+  const items = attentionItems();
+  if (!items.length) return '<div class="feed-item ok"><b>All clear</b><span>No instances or zones need attention right now.</span></div>';
+  return items.map(([k, t, s, sec]) => `<div class="feed-item ${k}" data-sec="${sec}"><b>${t}</b><span>${s}</span></div>`).join('');
+}
+// Top-bar status reflects the live alert count, not a fixed label.
+function updateStatus() {
+  const n = attentionItems().length, el = $('#status');
+  el.innerHTML = `<i></i>${n ? n + (n === 1 ? ' open alert' : ' open alerts') : 'All systems operational'}`;
+  el.classList.toggle('warn', !!n);
+}
+function zoneCapacityHtml() {
+  const cols = palette();
+  return ZONE_IDS.map((z, i) => {
+    const tot = availGpus().reduce((a, g) => a + ZONES[z].cap[g], 0), used = tot - availGpus().reduce((a, g) => a + freeGpus(z, g), 0), pct = tot ? used / tot * 100 : 0;
+    const tone = pct >= 85 ? 'var(--bad)' : pct >= 70 ? 'var(--warn)' : 'var(--accent)';
+    return `<div class="zc-row" data-sec="zones"><div class="zc-h"><b><span class="dot" style="background:${cols[i]}"></span>${ZONES[z].name}</b><span>${used} / ${tot} GPUs · ${pct.toFixed(0)}%</span></div><div class="bar"><i style="width:${pct.toFixed(1)}%;--c:${tone}"></i></div></div>`;
+  }).join('');
+}
+
 views.overview = {
   html: () => `<div class="grid kpis">${kpi('Running instances', 'k1', 'of <span id="k1b"></span> total', 'server', 'var(--s1)', '<div class="bar"><i id="k1bar"></i></div>')}${kpi('GPUs in use', 'k2', 'of <span id="k2b"></span> provisioned', 'chip', 'var(--s3)', '<div class="bar"><i id="k2bar"></i></div>')}${kpi('Avg GPU utilization', 'k3', 'Fleet average, live', 'pulse', 'var(--s7)', '<div id="sp-util" class="spark"></div>')}${kpi('Month-to-date spend', 'k4', 'Run rate <b id="k4b"></b>/hr', 'coin', 'var(--s2)', '<div id="sp-spend" class="spark"></div>')}${kpi('Wallet balance', 'k5', 'Runway <b id="k5b"></b> · click to add funds', 'wallet', 'var(--s4)', '<div class="bar"><i id="k5bar"></i></div>')}</div>
   <div class="grid cols-w">${card('GPU utilization', 'Average across running instances, live', 'c-util')}${card('Fleet load', 'Current average utilization', 'c-gauge')}</div>
-  <div class="grid cols-2" style="margin-top:16px">${card('Power draw', 'Total GPU power (W), live', 'c-power')}${card('Daily spend', 'Last 30 days (BDT)', 'c-daily')}</div>
-  <div class="grid cols-2" style="margin-top:16px">${card('Bangladesh zones', 'Dhaka · Gazipur · Jashore - hover for live capacity', 'c-map', 'lg')}${card('Spend by instance', 'Month to date', 'c-split', 'lg')}</div>
-  <div class="card" style="margin-top:16px"><h3>Instances</h3><div class="sub">Click a row to manage</div><div class="tbl-wrap" id="ov-table"></div></div>`,
-  init() { const c = $('#k5').closest('.card'); c.style.cursor = 'pointer'; c.onclick = addFundsDialog; },
+  <div class="grid cols-2" style="margin-top:16px"><div class="card"><h3>Needs attention</h3><div class="sub">Live checks across instances, zones and wallet</div><div id="c-attn" class="feed"></div></div><div class="card"><h3>Zone capacity</h3><div class="sub">Share of installed GPUs in use, by zone</div><div id="c-zcap" class="feed"></div></div></div>
+  <div class="grid cols-2" style="margin-top:16px">${card('Power draw', 'Total GPU power (W), live', 'c-power')}${card('Daily spend', 'Last 30 days (BDT)', 'c-daily')}</div>`,
+  init() {
+    // KPI tiles jump to the module that owns the number; wallet tile opens top-up.
+    const jump = { k1: 'instances', k2: 'instances', k3: 'monitoring', k4: 'billing' };
+    Object.entries(jump).forEach(([k, sec]) => { const c = $('#' + k).closest('.card'); c.style.cursor = 'pointer'; c.onclick = () => document.getElementById('sec-' + sec).scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    const c = $('#k5').closest('.card'); c.style.cursor = 'pointer'; c.onclick = addFundsDialog;
+    ['c-attn', 'c-zcap'].forEach(id => document.getElementById(id).onclick = e => { const it = e.target.closest('[data-sec]'); if (it) jumpTo(it.dataset.sec); });
+  },
   update(force) {
     const rs = running(), g = rs.reduce((a, v) => a + v.gpuCount, 0), tg = live().reduce((a, v) => a + v.gpuCount, 0), ag = aggregate(), uNow = rs.length ? ag.util[ag.util.length - 1] : 0, rr = rs.reduce((a, v) => a + rate(v), 0);
     setNum('k1', rs.length); $('#k1b').textContent = live().length; setBar('k1bar', live().length ? rs.length / live().length * 100 : 0);
@@ -263,7 +300,6 @@ views.overview = {
     const sp = (data, color) => ({ animation: false, grid: { left: 0, right: 0, top: 4, bottom: 0 }, xAxis: { type: 'category', show: false, boundaryGap: false, data: data.map((_, i) => i) }, yAxis: { type: 'value', show: false, min: 'dataMin' },
       series: [{ type: 'line', data, showSymbol: false, smooth: false, lineStyle: { width: 2, color }, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: color + '44' }, { offset: 1, color: color + '00' }]) } }] });
     mount('sp-util', 'view', sp(ag.util, css('--s7'))); mount('sp-spend', 'view', sp(S.daily.slice(-14), css('--s2')));
-    mount('c-map', 'view', zoneMapOpt(), mapKey());
     mount('c-gauge', 'view', { animation: false, series: [{ type: 'gauge', startAngle: 205, endAngle: -25, min: 0, max: 100, radius: '92%', center: ['50%', '58%'],
       progress: { show: true, width: 14, roundCap: false, itemStyle: { color: css('--s1') } }, pointer: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false },
       axisLine: { roundCap: false, lineStyle: { width: 14, color: [[1, css('--surface-2')]] } },
@@ -275,11 +311,8 @@ views.overview = {
     mount('c-daily', 'view', { ...b.common, legend: { show: false }, tooltip: { ...b.common.tooltip, axisPointer: { type: 'shadow' }, valueFormatter: v => money(v) },
       xAxis: { ...b.xAxis(days30), boundaryGap: true }, yAxis: b.yAxis({ axisLabel: { color: b.t2, formatter: kfmt } }),
       series: [{ type: 'bar', data: S.daily, barMaxWidth: 14, itemStyle: { color: css('--s1'), borderRadius: [2, 2, 0, 0] } }] });
-    const items = S.vms.filter(v => v.accrued > 0).sort((a, b) => b.accrued - a.accrued);
-    mount('c-split', 'view', { ...b.common, grid: { left: 110, right: 90, top: 6, bottom: 6 }, legend: { show: false }, tooltip: { ...b.common.tooltip, trigger: 'item', valueFormatter: v => money(v) },
-      xAxis: { type: 'value', show: false }, yAxis: { type: 'category', inverse: true, data: items.map(v => v.name), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: b.t2 } },
-      series: [{ type: 'bar', data: items.map(v => v.accrued), barMaxWidth: 16, itemStyle: { color: css('--s1'), borderRadius: [0, 2, 2, 0] }, label: { show: true, position: 'right', color: css('--text'), formatter: p => kfmt(p.value) } }] });
-    if (paint($('#ov-table'), vmTable(S.vms.filter(v => v.status !== 'terminated'), false), force)) bindRows();
+    paint($('#c-attn'), attention(), force);
+    paint($('#c-zcap'), zoneCapacityHtml(), force);
   },
 };
 
@@ -329,12 +362,10 @@ views.instances = {
 views.monitoring = {
   html: () => `<div class="toolbar"><select id="mvm"></select></div><div class="grid cols-2">${card('GPU utilization', '%', 'm-util')}${card('GPU memory used', 'GB', 'm-mem')}${card('GPU temperature', '°C', 'm-temp')}${card('Power draw', 'W', 'm-power')}${card('Network', 'MB/s in / out', 'm-net')}${card('Fleet utilization by instance', 'Now', 'm-fleet')}</div>`,
   sel: null,
-  init() {
-    const l = live(); if (!this.sel || !l.find(v => v.id === this.sel)) this.sel = (running()[0] || l[0] || {}).id;
-    $('#mvm').innerHTML = l.map(v => `<option value="${v.id}" ${v.id === this.sel ? 'selected' : ''}>${esc(v.name)}</option>`).join('');
-    $('#mvm').onchange = e => { this.sel = e.target.value; this.update(); };
-  },
+  init() { $('#mvm').onchange = e => { this.sel = e.target.value; this.update(true); }; },
   update() {
+    const l = live(); if (!this.sel || !l.find(v => v.id === this.sel)) this.sel = (running()[0] || l[0] || {}).id;
+    paint($('#mvm'), l.map(v => `<option value="${v.id}" ${v.id === this.sel ? 'selected' : ''}>${esc(v.name)}</option>`).join(''));
     const vm = S.vms.find(v => v.id === this.sel); if (!vm) return;
     metricCharts(vm, 'm-', 'view');
     const b = base(), rs = running();
@@ -353,7 +384,7 @@ function metricCharts(vm, p, group) {
 }
 
 views.zones = {
-  html: () => `<div class="grid cols-w">${card('Bangladesh data-centre zones', 'Live GPU availability per site', 'z-map', 'lg')}${card('Network', 'Latency from Dhaka over BDIX', 'z-lat', 'lg')}</div>
+  html: () => `<div class="grid cols-w">${card('Bangladesh data-centre zones', 'Live GPU availability per site', 'z-map', 'xl')}${card('Network', 'Latency from Dhaka over BDIX', 'z-lat', 'lg')}</div>
   <div class="grid" id="z-cards" style="margin-top:16px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))"></div>
   <div style="margin-top:16px">${card('GPU capacity by zone', 'Other customers · You · Free', 'z-cap', 'lg')}</div>`,
   update(force) {
@@ -373,7 +404,7 @@ views.zones = {
     ZONE_IDS.forEach(z => Object.keys(GPUS).filter(g => GPUS[g].status === 'available').forEach(g => { const m = S.vms.filter(v => v.status !== 'terminated' && v.region === z && v.gpu === g).reduce((a, v) => a + v.gpuCount, 0); cats.push(ZONES[z].name + ' · ' + GPUS[g].short); other.push(ZONES[z].used[g]); mine.push(m); free.push(freeGpus(z, g)); }));
     const seg = (name, data, color, last) => ({ name, type: 'bar', stack: 'c', data, barMaxWidth: 22, itemStyle: { color, borderColor: b.surface, borderWidth: 1, borderRadius: last ? [0, 4, 4, 0] : 0 } });
     mount('z-cap', 'view', { ...b.common, grid: { left: 170, right: 20, top: 30, bottom: 10 }, tooltip: { ...b.common.tooltip, axisPointer: { type: 'shadow' }, valueFormatter: v => v + ' GPUs' },
-      xAxis: { type: 'value', splitLine: { lineStyle: { color: b.grid } }, axisLabel: { color: b.t2 } }, yAxis: { type: 'category', inverse: true, data: cats, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: b.t2 } },
+      xAxis: { type: 'value', splitLine: { lineStyle: { color: b.grid } }, axisLabel: { color: b.t2 } }, yAxis: { type: 'category', inverse: true, data: cats, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: b.t2, interval: 0 } },
       series: [seg('Other customers', other, css('--surface-3')), seg('You', mine, cols[0]), seg('Free', free, cols[2], true)] }, S.theme + cats.length + other.join() + mine.join() + free.join());
   },
 };
@@ -389,9 +420,9 @@ views.activity = {
 views.storage = {
   html: () => `<div class="grid cols-2"><div class="card"><div class="toolbar"><h3 style="margin:0;flex:1">Snapshots</h3><button class="btn sm primary" id="snapNew">Create snapshot</button></div><div id="snaps"></div></div>${card('Storage by instance', 'Boot disk GB + snapshots GB (stacked)', 'c-stor')}</div>`,
   init() { $('#snapNew').onclick = () => snapshotDialog(); },
-  update() {
-    if (paint($('#snaps'), S.snapshots.length ? `<table><thead><tr><th>Name</th><th>Source</th><th class="num">Size</th><th>Created</th><th></th></tr></thead><tbody>${S.snapshots.map(s => `<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.vm)}</td><td class="num">${s.size} GB</td><td>${fmtDate(s.created)}</td><td><div class="row-actions"><button class="btn sm" data-restore="${s.id}">Restore</button><button class="btn sm danger" data-del="${s.id}">Delete</button></div></td></tr>`).join('')}</tbody></table>` : '<p class="sub">No snapshots.</p>', true)) {
-    document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { S.snapshots = S.snapshots.filter(s => s.id !== b.dataset.del); save(); toast('Snapshot deleted'); this.update(); });
+  update(force) {
+    if (paint($('#snaps'), S.snapshots.length ?`<table><thead><tr><th>Name</th><th>Source</th><th class="num">Size</th><th>Created</th><th></th></tr></thead><tbody>${S.snapshots.map(s => `<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.vm)}</td><td class="num">${s.size} GB</td><td>${fmtDate(s.created)}</td><td><div class="row-actions"><button class="btn sm" data-restore="${s.id}">Restore</button><button class="btn sm danger" data-del="${s.id}">Delete</button></div></td></tr>`).join('')}</tbody></table>` : '<p class="sub">No snapshots.</p>', force)) {
+    document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { S.snapshots = S.snapshots.filter(s => s.id !== b.dataset.del); save(); toast('Snapshot deleted'); this.update(true); });
     document.querySelectorAll('[data-restore]').forEach(b => b.onclick = () => toast('Restore started - a new instance will appear shortly'));
     }
     const b = base(), names = live().map(v => v.name), cols = palette();
@@ -404,23 +435,23 @@ views.storage = {
 function snapshotDialog() {
   const l = live(); if (!l.length) return toast('No instances');
   openModal(`<h2>Create snapshot</h2><label>Instance</label><select id="sv">${l.map(v => `<option>${esc(v.name)}</option>`).join('')}</select><label>Name</label><input id="sn" placeholder="my-snapshot"><div class="toolbar" style="margin-top:16px;justify-content:flex-end"><button class="btn" onclick="document.getElementById('modal').classList.add('hidden')">Cancel</button><button class="btn primary" id="sok">Create</button></div>`);
-  $('#sok').onclick = () => { const vm = l.find(v => v.name === $('#sv').value); S.snapshots.push({ id: 'snap-' + uid(), name: $('#sn').value.trim() || vm.name + '-snap', vm: vm.name, size: Math.round(vm.disk * rnd(.1, .6)), created: Date.now() }); save(); closeModal(); toast('Snapshot created'), logEv('Snapshot created', 'ok'); cur === 'storage' ? views.storage.update() : 0; };
+  $('#sok').onclick = () => { const vm = l.find(v => v.name === $('#sv').value); S.snapshots.push({ id: 'snap-' + uid(), name: $('#sn').value.trim() || vm.name + '-snap', vm: vm.name, size: Math.round(vm.disk * rnd(.1, .6)), created: Date.now() }); save(); closeModal(); toast('Snapshot created'), logEv('Snapshot created', 'ok'); views.storage.update(true); };
 }
 
 views.network = {
   html: () => `<div class="card"><div class="toolbar"><h3 style="margin:0;flex:1">Inbound rules</h3></div><div id="rules"></div>
   <div class="toolbar" style="margin-top:14px"><select id="rp"><option>TCP</option><option>UDP</option><option>ICMP</option></select><input id="rport" placeholder="Port (e.g. 8080)" style="width:140px"><input id="rsrc" placeholder="Source CIDR" value="0.0.0.0/0" style="width:160px"><input id="rnote" placeholder="Description"><button class="btn primary" id="radd">Add rule</button></div></div>`,
-  init() { $('#radd').onclick = () => { const port = $('#rport').value.trim(); if (!port) return toast('Enter a port'); S.rules.push({ id: 'r' + uid(), proto: $('#rp').value, port, source: $('#rsrc').value.trim() || '0.0.0.0/0', note: $('#rnote').value.trim() }); save(); toast('Rule added'), logEv('Firewall rule added'); this.update(); }; },
-  update() {
-    if (paint($('#rules'), `<table><thead><tr><th>Protocol</th><th>Port</th><th>Source</th><th>Description</th><th></th></tr></thead><tbody>${S.rules.map(r => `<tr><td>${r.proto}</td><td>${esc(r.port)}</td><td>${esc(r.source)}</td><td>${esc(r.note)}</td><td class="num"><button class="btn sm danger" data-rd="${r.id}">Remove</button></td></tr>`).join('')}</tbody></table>`, true)) document.querySelectorAll('[data-rd]').forEach(b => b.onclick = () => { S.rules = S.rules.filter(r => r.id !== b.dataset.rd); save(); this.update(); });
+  init() { $('#radd').onclick = () => { const port = $('#rport').value.trim(); if (!port) return toast('Enter a port'); S.rules.push({ id: 'r' + uid(), proto: $('#rp').value, port, source: $('#rsrc').value.trim() || '0.0.0.0/0', note: $('#rnote').value.trim() }); save(); toast('Rule added'), logEv('Firewall rule added'); this.update(true); }; },
+  update(force) {
+    if (paint($('#rules'),`<table><thead><tr><th>Protocol</th><th>Port</th><th>Source</th><th>Description</th><th></th></tr></thead><tbody>${S.rules.map(r => `<tr><td>${r.proto}</td><td>${esc(r.port)}</td><td>${esc(r.source)}</td><td>${esc(r.note)}</td><td class="num"><button class="btn sm danger" data-rd="${r.id}">Remove</button></td></tr>`).join('')}</tbody></table>`, force)) document.querySelectorAll('[data-rd]').forEach(b => b.onclick = () => { S.rules = S.rules.filter(r => r.id !== b.dataset.rd); save(); this.update(true); });
   },
 };
 
 views.keys = {
   html: () => `<div class="card"><div id="keys"></div><label>Name</label><input id="kn" placeholder="work-laptop" style="max-width:320px"><label>Public key</label><input id="kv" placeholder="ssh-ed25519 AAAA..."><div style="margin-top:12px"><button class="btn primary" id="kadd">Add key</button></div></div>`,
-  init() { $('#kadd').onclick = () => { const n = $('#kn').value.trim(), v = $('#kv').value.trim(); if (!n || !v.startsWith('ssh-')) return toast('Enter a name and a valid public key'); S.keys.push({ id: 'key-' + uid(), name: n, fp: 'SHA256:' + Array.from({ length: 8 }, () => Math.floor(rnd(16, 255)).toString(16)).join(':') }); save(); toast('Key added'), logEv('SSH key added'); this.update(); }; },
-  update() {
-    if (paint($('#keys'), `<table><thead><tr><th>Name</th><th>Fingerprint</th><th></th></tr></thead><tbody>${S.keys.map(k => `<tr><td><b>${esc(k.name)}</b></td><td><code>${esc(k.fp)}</code></td><td class="num"><button class="btn sm danger" data-kd="${k.id}">Delete</button></td></tr>`).join('')}</tbody></table>`, true)) document.querySelectorAll('[data-kd]').forEach(b => b.onclick = () => { S.keys = S.keys.filter(k => k.id !== b.dataset.kd); save(); this.update(); });
+  init() { $('#kadd').onclick = () => { const n = $('#kn').value.trim(), v = $('#kv').value.trim(); if (!n || !v.startsWith('ssh-')) return toast('Enter a name and a valid public key'); S.keys.push({ id: 'key-' + uid(), name: n, fp: 'SHA256:' + Array.from({ length: 8 }, () => Math.floor(rnd(16, 255)).toString(16)).join(':') }); save(); toast('Key added'), logEv('SSH key added'); this.update(true); }; },
+  update(force) {
+    if (paint($('#keys'), `<table><thead><tr><th>Name</th><th>Fingerprint</th><th></th></tr></thead><tbody>${S.keys.map(k => `<tr><td><b>${esc(k.name)}</b></td><td><code>${esc(k.fp)}</code></td><td class="num"><button class="btn sm danger" data-kd="${k.id}">Delete</button></td></tr>`).join('')}</tbody></table>`, force)) document.querySelectorAll('[data-kd]').forEach(b => b.onclick = () => { S.keys = S.keys.filter(k => k.id !== b.dataset.kd); save(); this.update(true); });
   },
 };
 
@@ -461,7 +492,7 @@ function vmAction(id, act) {
     $('#tok').onclick = () => { closeModal(); v.status = 'terminated'; v.ip = '-'; logEv(v.name + ' terminated', 'warn'); save(); toast(v.name + ' terminated'); if (drawerVm === id) closeDrawer(); refresh(); };
   }
 }
-function refresh(force = true) { views[cur].update && views[cur].update(force); if (drawerVm) renderDrawer(); }
+function refresh(force = true) { SECTIONS.forEach(v => views[v].update && views[v].update(force)); updateStatus(); if (drawerVm) renderDrawer(); }
 
 /* ---------- drawer ---------- */
 function openDrawer(id) {
@@ -541,17 +572,15 @@ function tick() {
   if (!document.activeElement || document.activeElement.tagName !== 'INPUT') refresh(false);
 }
 function applyTheme() { document.documentElement.dataset.theme = S.theme; }
-$('#nav').onclick = e => { const a = e.target.closest('a'); if (a) go(a.dataset.view); };
 $('#launchBtn').onclick = () => launchDialog();
 $('#themeBtn').onclick = () => { S.theme = S.theme === 'dark' ? 'light' : 'dark'; save(); applyTheme(); refresh(); if (drawerVm) renderDrawer(true); };
-$('#resetBtn').onclick = () => { localStorage.removeItem(KEY); S = seed(); applyTheme(); closeDrawer(); go(cur); toast('Demo data reset'); };
-window.addEventListener('resize', () => { Object.values(charts).forEach(c => c.c.resize()); moveNav(true); });
+window.addEventListener('resize', () => Object.values(charts).forEach(c => c.c.resize()));
 // Subtle press feedback only (no hover scaling) - enterprise-grade restraint
 const PRESS = '.btn:not(:disabled), .opt';
 const unpress = e => { const t = e.target.closest(PRESS); if (t && !reduce) animate(t, { scale: 1 }, { duration: 0.12, ease: 'easeOut' }); };
 document.addEventListener('pointerdown', e => { const t = e.target.closest(PRESS); if (t && !reduce) animate(t, { scale: 0.98 }, { duration: 0.08 }); });
 document.addEventListener('pointerup', unpress); document.addEventListener('pointerout', unpress);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeDrawer(); } });
-{ const [hv, ht] = location.hash.slice(1).split(','); if (ht) S.theme = ht; applyTheme(); go(views[hv] ? hv : 'overview'); if (hv === 'drawer') openDrawer(S.vms[0].id); }
+{ const [hv, ht] = location.hash.slice(1).split(','); if (ht) S.theme = ht; applyTheme(); renderAll(); updateStatus(); if (views[hv]) document.getElementById('sec-' + hv)?.scrollIntoView(); if (hv === 'drawer') openDrawer(S.vms[0].id); }
  setInterval(tick, 2000); setInterval(save, 10000);
 })();
